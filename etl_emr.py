@@ -5,6 +5,8 @@ from pyspark.sql.functions import udf, col
 from pyspark.sql.functions import year, month, dayofmonth, hour, weekofyear, date_format, monotonically_increasing_id
         
 def create_spark_session():
+    """ Function initiates a spark session"""
+    
     spark = SparkSession \
         .builder \
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
@@ -41,18 +43,18 @@ def process_log_data(spark, input_data, output_data):
     users_table = users_table.write.parquet(os.path.join(output_data, 'users'), mode='overwrite')
 
     get_timestamp = udf(lambda ms: datetime.fromtimestamp(ms/1000).strftime('%H:%M:%S'))
-    log_df = log_df.withColumn('start_time', get_timestamp(col('ts')))
+    log_df = log_df.withColumn('timestamp', get_timestamp(col('ts')))
     get_datetime = udf(lambda ms: datetime.fromtimestamp(ms/1000).strftime('%Y-%m-%d %H:%M:%S'))
-    log_df = log_df.withColumn('datetime', get_datetime(col('ts')).cast('timestamp'))
-    log_df = log_df.withColumn('month', month(col('datetime')))
+    log_df = log_df.withColumn('start_time', get_datetime(col('ts')).cast('timestamp'))
+    log_df = log_df.withColumn('month', month(col('start_time')))
     
     time_table = log_df.select(('start_time'), \
-                 hour('datetime').alias('hour'), \
-                 dayofmonth('datetime').alias('day'), \
-                 weekofyear('datetime').alias('week'), \
-                 month('datetime').alias('month'), \
-                 year('datetime').alias('year'), \
-                 date_format('datetime', 'u').alias('weekday'))
+                 hour('start_time').alias('hour'), \
+                 dayofmonth('start_time').alias('day'), \
+                 weekofyear('start_time').alias('week'), \
+                 month('start_time').alias('month'), \
+                 year('start_time').alias('year'), \
+                 date_format('start_time', 'u').alias('weekday'))
     time_table = time_table.write.partitionBy('year', 'month').parquet(os.path.join(output_data, \
       'time'), mode='overwrite')
     
